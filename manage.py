@@ -95,7 +95,7 @@ JS = r"""
     $('#wl').querySelectorAll('button[data-armed]').forEach(x => { delete x.dataset.armed; x.textContent = '刪除'; });
     b.dataset.armed = '1'; b.textContent = '確定刪除？';
   });
-  $('#pinform').addEventListener('submit', e => {
+  $('#pinbox').addEventListener('submit', e => {
     e.preventDefault(); pin = $('#pin').value.trim();
     if ($('#remember').checked) { try { localStorage.setItem('kanpan-pin', pin); } catch (x) {} }
     showPin(); msg('PIN 已設定，可以開始增刪', 'ok');
