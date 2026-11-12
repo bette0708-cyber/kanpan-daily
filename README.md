@@ -13,6 +13,15 @@
 - 自選股：編輯 `自選股.txt`，一行一檔，`#` 後面寫中文名。
 - 報告存在 `報告/`，`報告/最新報告.html` 永遠是最新一份。
 
+## 雲端自動更新（GitHub，不用開電腦）
+`.github/workflows/kanpan.yml` 在 GitHub 雲端定時執行，結果發佈到 GitHub Pages：
+- 看盤日報：`https://bette0708-cyber.github.io/kanpan-daily/`
+- 回測週報：`https://bette0708-cyber.github.io/kanpan-daily/backtest.html`
+- 時間（台北）：週一～五 07:40、16:30；週六 09:00 回測。GitHub 尖峰時可能晚 5～30 分鐘。
+- 每次執行會把 `紀錄/`（每日預測）和 `快取/` 存回 repo，回測才有連續資料。
+- 手動執行：GitHub 網頁或 App → Actions → 看盤自動更新 → Run workflow。
+- 改自選股：直接在 GitHub 上編輯 `自選股.txt`，下次執行生效。
+
 ## 手機版
 報告是手機優先版面（頂部可左右滑的股票導覽、卡片式總覽、深淺色自動切換）。
 已發佈成私人網頁：https://claude.ai/artifact/4taXPu3zVqqJVc3yGweDLF
