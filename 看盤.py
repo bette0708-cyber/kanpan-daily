@@ -25,6 +25,7 @@ import pandas as pd  # noqa: E402
 from data import load_daily as yahoo_daily, now_tpe, resolve_tw_symbol  # noqa: E402  (Yahoo＋官方校正)
 import chips  # noqa: E402
 import masters  # noqa: E402
+import monitor  # noqa: E402
 import outlook  # noqa: E402
 import patterns  # noqa: E402
 import report  # noqa: E402
@@ -45,6 +46,14 @@ def read_watchlist() -> dict[str, str]:
 
 
 LEDGER_DIR = HERE / "紀錄"
+
+
+def drop_partial(df: pd.DataFrame) -> pd.DataFrame:
+    """盤中還沒收盤的今天那根K線先拿掉：教學說單一K線要收盤才算數，盤中變化交給即時監看頁。"""
+    now = now_tpe()
+    if len(df) and df.index[-1].date() == now.date() and now.strftime("%H:%M") < "13:35":
+        return df.iloc[:-1]
+    return df
 
 
 def save_ledger(rows: list[dict], o: dict, now) -> None:
@@ -78,12 +87,12 @@ def main() -> int:
     names = read_watchlist()
     syms = args.symbols or list(names)
     print("抓取加權指數與各國指數…")
-    taiex, _ = yahoo_daily("^TWII", "5y")
+    taiex = drop_partial(yahoo_daily("^TWII", "5y")[0])
     world = outlook.load_world()
     print("抓取期交所台指期日盤/夜盤…")
     o = outlook.build(taiex, world)
 
-    blocks, charts, summary, pool, ledger = [], {}, [], [], []
+    blocks, charts, summary, pool, ledger, watch = [], {}, [], [], [], []
     todo = [("^TWII", "台股加權指數", taiex)]
     for s in syms:
         full = resolve_tw_symbol(s)
@@ -93,7 +102,7 @@ def main() -> int:
             print(f"  ✘ {s}: {e}")
             continue
         name = names.get(s) or meta.get("longName") or meta.get("shortName") or full
-        todo.append((full, name, df))
+        todo.append((full, name, drop_partial(df)))
 
     chip_days = list(taiex.index[-10:])
     print("分析中（三大法人資料第一次抓會比較久，之後有快取）…")
@@ -120,6 +129,7 @@ def main() -> int:
                                          patterns.summarize_backtest(sigs), cid, m))
         charts[cid] = report.chart_data(d, sigs)
         last = sigs[-1] if sigs else None
+        watch.append(monitor.watch_item(sym, name, d, sigs, m))
         summary.append({"cid": cid, "name": name, "sym": sym, "close": d["close"].iat[-1],
                         "chg": (d["close"].iat[-1] / d["close"].iat[-2] - 1) * 100, "m": m, "last": last})
         print(f"  ✔ {name}（{sym}）綜合 {m['total']:.0f} 分 {m['verdict'][0]}｜短線 {m['short']:.0f}／中長線 {m['mid']:.0f}"
@@ -134,6 +144,7 @@ def main() -> int:
     path = out_dir / f"看盤報告_{now:%Y%m%d_%H%M}.html"
     path.write_text(html, encoding="utf-8")
     (out_dir / "最新報告.html").write_text(html, encoding="utf-8")
+    (out_dir / "即時監看.html").write_text(monitor.build_html(watch, o, now), encoding="utf-8")
     save_ledger(ledger, o, now)
 
     if o.get("target") is not None:

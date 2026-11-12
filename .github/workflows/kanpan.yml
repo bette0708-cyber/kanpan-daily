@@ -58,6 +58,7 @@ jobs:
           mkdir -p site
           if [ -f 報告/最新報告.html ]; then cp 報告/最新報告.html site/index.html; fi
           if [ -f 報告/回測週報.html ]; then cp 報告/回測週報.html site/backtest.html; fi
+          if [ -f 報告/即時監看.html ]; then cp 報告/即時監看.html site/monitor.html; fi
           touch site/.nojekyll
 
       - name: 存回預測紀錄與快取
