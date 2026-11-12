@@ -156,6 +156,53 @@ def load_daily(symbol: str, range_: str = "5y") -> tuple[pd.DataFrame, dict]:
     return patch_official(df, symbol), meta
 
 
+# ---------------------------------------------------------------- 股票清單／自選股同步
+STOCK_RE = re.compile(r"^(\d{4}|00\d{2,4}[A-Z]?)$")      # 一般股票 4 碼、ETF 00 開頭（排除權證、債券）
+WATCHLIST_RAW = "https://raw.githubusercontent.com/bette0708-cyber/kanpan-daily/main/%E8%87%AA%E9%81%B8%E8%82%A1.txt"
+
+
+def stock_list() -> list[list[str]]:
+    """上市＋上櫃股票／ETF 清單 [[代號, 名稱, 'tse'|'otc'], ...]，給自選股頁面自動完成用。每天快取一次。"""
+    cache = OFFICIAL_CACHE.parent / f"股票清單_{now_tpe():%Y%m%d}.json"
+    if cache.exists():
+        return json.loads(cache.read_text(encoding="utf-8"))
+    out: dict[str, list[str]] = {}
+    try:
+        for x in requests.get("https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL", headers=UA, timeout=30).json():
+            if STOCK_RE.match(x.get("Code", "")):
+                out[x["Code"]] = [x["Code"], x["Name"].strip(), "tse"]
+        for x in requests.get("https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes",
+                              headers=UA, timeout=30).json():
+            c = x.get("SecuritiesCompanyCode", "")
+            if STOCK_RE.match(c) and c not in out:
+                out[c] = [c, x["CompanyName"].strip(), "otc"]
+    except (requests.RequestException, ValueError, KeyError):
+        old = sorted(OFFICIAL_CACHE.parent.glob("股票清單_*.json"))
+        return json.loads(old[-1].read_text(encoding="utf-8")) if old else []
+    rows = sorted(out.values())
+    if rows:
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        for f in cache.parent.glob("股票清單_*.json"):
+            f.unlink()
+        cache.write_text(json.dumps(rows, ensure_ascii=False), encoding="utf-8")
+    return rows
+
+
+def sync_watchlist(path: Path) -> None:
+    """電腦上執行時，先從 GitHub 抓最新的自選股（在網頁上增刪的會存在那裡）。抓不到就用本機的。"""
+    import os
+    if os.environ.get("KANPAN_SITE"):        # 雲端執行時 repo 裡的就是最新的
+        return
+    try:
+        r = requests.get(WATCHLIST_RAW, headers=UA, timeout=10, params={"t": int(time.time())})
+        if r.status_code == 200 and "#" in r.text:
+            text = r.content.decode("utf-8-sig")
+            if path.read_text(encoding="utf-8-sig") != text if path.exists() else True:
+                path.write_text(text, encoding="utf-8")
+    except (requests.RequestException, OSError):
+        pass
+
+
 # ---------------------------------------------------------------- 期交所 台指期
 SESSION_DAY, SESSION_NIGHT = "一般", "盤後"
 

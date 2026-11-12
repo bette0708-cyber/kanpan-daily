@@ -22,8 +22,9 @@ if sys.stdout is None:
 
 import pandas as pd  # noqa: E402
 
-from data import load_daily as yahoo_daily, now_tpe, resolve_tw_symbol  # noqa: E402  (Yahoo＋官方校正)
+from data import load_daily as yahoo_daily, now_tpe, resolve_tw_symbol, sync_watchlist  # noqa: E402  (Yahoo＋官方校正)
 import chips  # noqa: E402
+import manage  # noqa: E402
 import masters  # noqa: E402
 import monitor  # noqa: E402
 import outlook  # noqa: E402
@@ -32,8 +33,9 @@ import report  # noqa: E402
 
 
 def read_watchlist() -> dict[str, str]:
-    """{代號: 中文名}，中文名取自 # 後面的備註。"""
+    """{代號: 中文名}，中文名取自 # 後面的備註。電腦上執行時先同步 GitHub 上的最新清單。"""
     f = HERE / "自選股.txt"
+    sync_watchlist(f)
     if not f.exists():
         return {}
     out = {}
@@ -145,6 +147,7 @@ def main() -> int:
     path.write_text(html, encoding="utf-8")
     (out_dir / "最新報告.html").write_text(html, encoding="utf-8")
     (out_dir / "即時監看.html").write_text(monitor.build_html(watch, o, now), encoding="utf-8")
+    (out_dir / "自選股.html").write_text(manage.build_html(now), encoding="utf-8")
     save_ledger(ledger, o, now)
 
     if o.get("target") is not None:

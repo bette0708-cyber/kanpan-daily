@@ -7,6 +7,9 @@ on:
     - cron: "40 23 * * 0-4"   # 台北 週一～五 07:40：用完整夜盤評估當天
     - cron: "30 8 * * 1-5"    # 台北 週一～五 16:30：收盤後確認訊號
     - cron: "0 1 * * 6"       # 台北 週六 09:00：每週回測
+  push:                        # 自選股在網頁上增刪（或直接改檔）後自動重跑
+    branches: [main]
+    paths: ["自選股.txt"]
   workflow_dispatch:           # 也可以在 GitHub 網頁或手機 App 上手動按「Run workflow」
     inputs:
       backtest:
@@ -59,6 +62,7 @@ jobs:
           if [ -f 報告/最新報告.html ]; then cp 報告/最新報告.html site/index.html; fi
           if [ -f 報告/回測週報.html ]; then cp 報告/回測週報.html site/backtest.html; fi
           if [ -f 報告/即時監看.html ]; then cp 報告/即時監看.html site/monitor.html; fi
+          if [ -f 報告/自選股.html ]; then cp 報告/自選股.html site/watchlist.html; fi
           touch site/.nojekyll
 
       - name: 存回預測紀錄與快取

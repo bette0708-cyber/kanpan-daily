@@ -503,7 +503,8 @@ def site_link(title: str) -> str:
     """在 GitHub 網站版（環境變數 KANPAN_SITE=1）加上日報 ↔ 週報互連。"""
     if not os.environ.get("KANPAN_SITE"):
         return ""
-    pages = [("看盤日報", "index.html"), ("即時監看", "monitor.html"), ("回測週報", "backtest.html")]
+    pages = [("看盤日報", "index.html"), ("即時監看", "monitor.html"), ("回測週報", "backtest.html"),
+             ("自選股", "watchlist.html")]
     links = "　".join(f'<a href="{href}">{name}</a>' for name, href in pages if name != title)
     return f'<p class="toplink">{links}</p>'
 

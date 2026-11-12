@@ -2,3 +2,10 @@ name = "kanpan-proxy"
 main = "worker.js"
 compatibility_date = "2025-01-01"
 workers_dev = true
+
+[vars]
+REPO = "bette0708-cyber/kanpan-daily"
+
+# 密鑰（不寫在這裡）：
+#   npx wrangler@3.114.0 secret put GH_TOKEN    ← GitHub 細粒度金鑰（只能改 kanpan-daily 的內容）
+#   npx wrangler@3.114.0 secret put WATCH_PIN   ← 自選股管理 PIN 碼

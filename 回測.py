@@ -35,7 +35,7 @@ import outlook  # noqa: E402
 import patterns  # noqa: E402
 import report  # noqa: E402
 from data import SESSION_NIGHT, now_tpe, resolve_tw_symbol, taifex_tx  # noqa: E402
-from data import load_daily as yahoo_daily  # noqa: E402  (Yahoo＋官方校正)
+from data import load_daily as yahoo_daily, sync_watchlist  # noqa: E402  (Yahoo＋官方校正)
 from report import esc  # noqa: E402
 
 LEDGER = HERE / "紀錄"
@@ -49,6 +49,7 @@ COMBOS = {"composite": ("綜合分數", "全部方法加權", None),
 
 def read_watchlist() -> dict[str, str]:
     f = HERE / "自選股.txt"
+    sync_watchlist(f)
     out = {}
     if f.exists():
         for line in f.read_text(encoding="utf-8-sig").splitlines():
