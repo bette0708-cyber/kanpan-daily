@@ -13,6 +13,16 @@
 - 自選股：編輯 `自選股.txt`，一行一檔，`#` 後面寫中文名。
 - 報告存在 `報告/`，`報告/最新報告.html` 永遠是最新一份。
 
+## 盤中即時監看（monitor.py）
+https://bette0708-cyber.github.io/kanpan-daily/monitor.html
+- 盤中（08:30～13:35）每 5 秒更新證交所即時報價；非交易時間每分鐘更新一次。
+- 盯住用前一天收盤算好的關鍵價位：待確認的買點有沒有「站上訊號收盤＋量跟上」（確認中）、有沒有跌破停損。
+- 提醒區列出跌破停損／開始確認的股票（手機支援時會震動）。大盤即時漲跌會對照早上的評估。
+- 盤中K線還沒收完，只是參考；訊號照教學要等收盤才算數。
+- 報價經由 Cloudflare Worker 轉接（`cloudflare/worker.js`，網址設定在 `監看設定.json`）：
+  只轉接證交所報價、只回應自己的網頁、同一查詢 4 秒內共用快取。
+  修改後重新部署：在 `cloudflare/` 資料夾執行 `npx wrangler@3.114.0 deploy`。
+
 ## 雲端自動更新（GitHub，不用開電腦）
 `.github/workflows/kanpan.yml` 在 GitHub 雲端定時執行，結果發佈到 GitHub Pages：
 - 看盤日報：`https://bette0708-cyber.github.io/kanpan-daily/`
