@@ -1,0 +1,266 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>回測週報</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=Noto+Sans+TC:wght@400;600;700&display=swap">
+<style>
+/* 版面：手機單欄、頂部固定的股票導覽列；桌機加寬成雙欄卡片 */
+:root{
+  --bg:#eef0f3;--surface:#ffffff;--ink:#14171c;--muted:#5d6470;--line:#dfe3e8;
+  --up:#cf2e2a;--dn:#0f8457;--mid:#a07a12;--accent:#2b56c9;
+  --font:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"Cascadia Mono",monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0d0f12;--surface:#171a1f;--ink:#e7e9ed;--muted:#9aa1ad;--line:#2a2e36;
+  --up:#ff5a52;--dn:#31c584;--mid:#e0b43c;--accent:#86a2ff;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d0f12;--surface:#171a1f;--ink:#e7e9ed;--muted:#9aa1ad;--line:#2a2e36;
+  --up:#ff5a52;--dn:#31c584;--mid:#e0b43c;--accent:#86a2ff;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.6 var(--font);margin:0;-webkit-text-size-adjust:100%}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.wrap{max-width:1040px;margin:0 auto;padding-block:8px 32px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{text-wrap:balance;margin:0}
+h1{font-size:20px;font-weight:700}
+h2{font-size:18px;font-weight:700}
+h3{font-size:14px;color:var(--muted);font-weight:600;margin:14px 0 6px}
+p{margin:6px 0}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:500}
+.up{color:var(--up)}.dn{color:var(--dn)}.mid{color:var(--mid)}
+.muted{color:var(--muted);font-size:13px}
+small{display:block;color:var(--muted);font-size:12px;line-height:1.45}
+
+/* 頂部導覽 */
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--surface);
+  border-bottom:1px solid var(--line);margin-left:calc(-1*max(16px,env(safe-area-inset-left,0px)));
+  margin-right:calc(-1*max(16px,env(safe-area-inset-right,0px)));
+  padding:10px max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))}
+.topbar .t{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.nav{display:flex;gap:6px;overflow-x:auto;padding:8px 0 10px;scrollbar-width:none}
+.nav::-webkit-scrollbar{display:none}
+.nav a{flex:none;font-size:13px;padding:5px 12px;border-radius:999px;border:1px solid var(--line);
+  color:var(--ink);text-decoration:none;white-space:nowrap}
+.nav a.on{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.nav a:focus-visible,summary:focus-visible,.sum-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* 區塊 */
+.block{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:12px;
+  scroll-margin-top:calc(env(safe-area-inset-top,0px) + 104px);min-width:0}
+.sec-title{margin-bottom:10px}
+.eyebrow{font-size:12px;letter-spacing:.04em;color:var(--muted);margin:0 0 4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.note{background:color-mix(in srgb,var(--accent) 10%,transparent);padding:10px 12px;border-radius:10px;font-size:14px}
+
+/* 大盤結論 */
+.verdict{border-radius:12px;padding:14px;text-align:center;background:color-mix(in srgb,var(--muted) 10%,transparent)}
+.verdict .eyebrow{justify-content:center}
+.verdict .v-main{font-size:30px;font-weight:700;letter-spacing:.08em;margin:2px 0}
+.verdict .v-sub{margin:0;color:var(--muted);font-size:13px}
+.verdict.up1,.verdict.up2{background:color-mix(in srgb,var(--up) 11%,transparent)}.verdict.up1 .v-main,.verdict.up2 .v-main{color:var(--up)}
+.verdict.dn1,.verdict.dn2{background:color-mix(in srgb,var(--dn) 11%,transparent)}.verdict.dn1 .v-main,.verdict.dn2 .v-main{color:var(--dn)}
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 4px}
+.facts div{border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column}
+.facts span:first-child{font-size:12px;color:var(--muted)}
+.facts .num{font-size:17px}
+
+/* 清單列 */
+.list{list-style:none;margin:0;padding:0}
+.row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row>span:first-child{min-width:0}
+.row>span:last-child{text-align:right;white-space:nowrap}
+
+details{border-top:1px solid var(--line);margin-top:12px;padding-top:4px}
+summary{cursor:pointer;font-weight:600;font-size:14px;color:var(--accent);padding:8px 0;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸";display:inline-block;width:1.1em;transition:transform .15s}
+details[open]>summary::before{transform:rotate(90deg)}
+@media (prefers-reduced-motion:reduce){summary::before{transition:none}}
+
+/* 分數橫條 */
+.meter{display:grid;grid-template-columns:52px 1fr 36px;align-items:center;gap:8px;margin:5px 0;font-size:13px}
+.m-label{color:var(--muted)}
+.bar{position:relative;height:6px;border-radius:3px;
+  background:linear-gradient(90deg,color-mix(in srgb,var(--dn) 35%,transparent),color-mix(in srgb,var(--muted) 20%,transparent) 50%,color-mix(in srgb,var(--up) 35%,transparent))}
+.bar::after{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:var(--muted);opacity:.5}
+.bar i{position:absolute;top:50%;width:12px;height:12px;border-radius:50%;transform:translate(-50%,-50%);
+  background:var(--mid);border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line)}
+.bar i.up{background:var(--up)}.bar i.dn{background:var(--dn)}
+.meter b{text-align:right}
+.meter.big .m-label{color:var(--ink);font-weight:600}.meter.big .bar{height:8px}.meter.big b{font-size:18px;line-height:1}
+
+/* 標籤 */
+.pill{display:inline-block;font-size:12px;line-height:1.5;padding:1px 8px;border-radius:999px;
+  border:1px solid var(--line);color:var(--muted);white-space:nowrap;margin-right:4px}
+.pill.buy{color:var(--up);border-color:color-mix(in srgb,var(--up) 45%,transparent);background:color-mix(in srgb,var(--up) 8%,transparent)}
+.pill.sell{color:var(--dn);border-color:color-mix(in srgb,var(--dn) 45%,transparent);background:color-mix(in srgb,var(--dn) 8%,transparent)}
+.pill.v-up1,.pill.v-up2{color:var(--up);border-color:currentColor}
+.pill.v-dn1,.pill.v-dn2{color:var(--dn);border-color:currentColor}
+.pill.v-flat{color:var(--mid);border-color:currentColor}
+
+/* 總覽卡片 */
+.sum-grid{display:grid;grid-template-columns:1fr;gap:10px}
+.sum-card{display:block;border:1px solid var(--line);border-radius:12px;padding:10px 12px;color:inherit;text-decoration:none;min-width:0}
+.sum-card:active{background:color-mix(in srgb,var(--muted) 8%,transparent)}
+.sum-top{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
+.sum-top b{flex:1;font-size:16px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sum-foot{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+
+/* 個股 */
+.s-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.s-head h2{font-size:20px}
+.code{font-size:12px;color:var(--muted);font-family:var(--mono)}
+.price{text-align:right;display:flex;flex-direction:column}
+.price b{font-size:20px}
+.tags{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}
+.scores{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:4px}
+.signal{border-radius:10px;padding:8px 12px;margin-top:10px;font-size:14px;background:color-mix(in srgb,var(--muted) 8%,transparent)}
+.signal p{margin:2px 0}
+.signal.buy{background:color-mix(in srgb,var(--up) 8%,transparent)}
+.signal.sell{background:color-mix(in srgb,var(--dn) 8%,transparent)}
+.chart{height:300px;margin-top:12px;max-width:100%}
+.legend{margin-top:4px}
+.legend i{display:inline-block;width:12px;height:2px;vertical-align:middle;margin:0 3px 0 6px}
+.legend .l5{background:#e08a00}.legend .l20{background:#8b5cf6}.legend .l60{background:#0ea5e9}
+.pats{list-style:none;padding:0;margin:0;font-size:14px}
+.pats li{padding:6px 0;border-bottom:1px solid var(--line)}.pats li:last-child{border:0}
+.methods{list-style:none;padding:0;margin:0}
+.method{padding:10px 0;border-bottom:1px solid var(--line)}.method:last-child{border:0}
+.m-head{display:flex;justify-content:space-between;gap:8px}
+.method p{margin:4px 0 0;font-size:14px}
+.score{font-size:15px}
+
+/* 表格（只用在回測，可左右滑） */
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;white-space:nowrap}
+th{color:var(--muted);font-weight:600}
+.toplink{margin:2px 0 0;font-size:13px}.toplink a{color:var(--accent);text-decoration:none;font-weight:600}
+.warn{font-size:12px;color:var(--muted);text-align:center;margin:20px 0 0}
+
+@media (min-width:760px){
+  .sum-grid{grid-template-columns:1fr 1fr}
+  .chart{height:400px}
+  .facts{grid-template-columns:repeat(4,1fr)}
+}
+
+.acc{display:grid;grid-template-columns:1fr 46px;align-items:center;gap:8px;margin:4px 0}
+.acc .bar{height:8px}
+.rank{display:grid;grid-template-columns:28px 1fr;gap:8px;padding:12px 0;border-bottom:1px solid var(--line)}
+.rank:last-child{border:0}
+.rank .no{font-family:var(--mono);font-size:18px;color:var(--muted);text-align:center}
+.rank.top .no{color:var(--up);font-weight:700}
+.rank .nm{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.sub{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--muted)}
+.podium{display:grid;gap:8px}
+.podium>div{border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.podium span{display:block;font-size:12px;color:var(--muted)}
+.podium b{font-size:16px}
+.delta{font-size:12px;margin-left:6px}
+@media (min-width:760px){.podium{grid-template-columns:repeat(3,1fr)}}
+</style>
+
+<div class="wrap">
+ <header class="topbar">
+  <div class="t"><h1>回測週報</h1><span class="muted num">2026/11/12 09:32</span></div><p class="toplink"><a href="index.html">← 看盤日報</a></p>
+  <nav class="nav" id="nav" aria-label="跳到區塊"></nav>
+ </header>
+ <section class="block" id="sum" data-nav="結論"><h2 class="sec-title">本週結論</h2>
+<p class="muted">以「近 1 年、預測 5 日後漲跌」的平衡命中率排名。50% = 擲銅板，越高越準。</p>
+<div class="podium"><div><span>近1年第 1 名</span><b>RSI</b><div class="acc"><span class="bar"><i class="up" style="left:67%"></i></span><b class="num up">57%</b></div></div><div><span>近1年第 2 名</span><b>階段分析</b><div class="acc"><span class="bar"><i class="up" style="left:66%"></i></span><b class="num up">57%</b></div></div><div><span>近1年第 3 名</span><b>KD 隨機指標</b><div class="acc"><span class="bar"><i class="mid" style="left:55%"></i></span><b class="num mid">52%</b></div></div></div>
+<ul class="list">
+<li class="row"><span>近 3 個月最準<small>最近的市場狀況下表現最好</small></span><span class="num">RSI</span></li>
+<li class="row"><span>近 1 年最不準<small>平衡命中率 47%</small></span><span class="num">布林通道</span></li>
+<li class="row"><span>大盤最準的預測方式<small>近1年收盤方向平衡命中 78%</small></span><span class="num">夜盤</span></li>
+</ul></section><section class="block" id="rank" data-nav="方法排行"><h2 class="sec-title">個股方法排行（預測 5 日後）</h2>
+<p class="muted">11 檔（自選股＋加權指數）近 1 年每天的判讀，跟 5 個交易日後的實際漲跌比對。
+分數 ≥ +0.5 算看多、≤ −0.5 算看空（綜合分數用 57／43 分）。▲▼ 是跟上週比的名次變化。</p>
+<ul class="list"><li class="rank top"><span class="no">1</span><div><div class="nm"><b>RSI<span class="delta up">▲5</span></b><small>J. Welles Wilder</small></div><div class="acc"><span class="bar"><i class="up" style="left:67%"></i></span><b class="num up">57%</b></div><div class="sub"><span>看多時準 70%（43次）</span><span>看空時準 44%（516次）</span><span>近3個月 74%</span><span>近5年 51%</span></div></div></li><li class="rank top"><span class="no">2</span><div><div class="nm"><b>階段分析<span class="delta dn">▼1</span></b><small>Stan Weinstein</small></div><div class="acc"><span class="bar"><i class="up" style="left:66%"></i></span><b class="num up">57%</b></div><div class="sub"><span>看多時準 57%（2527次）</span><span>看空時準 56%（79次）</span><span>近3個月 43%</span><span>近5年 51%</span></div></div></li><li class="rank top"><span class="no">3</span><div><div class="nm"><b>KD 隨機指標<span class="delta muted">－</span></b><small>George Lane</small></div><div class="acc"><span class="bar"><i class="mid" style="left:55%"></i></span><b class="num mid">52%</b></div><div class="sub"><span>看多時準 57%（488次）</span><span>看空時準 47%（706次）</span><span>近3個月 53%</span><span>近5年 48%</span></div></div></li><li class="rank"><span class="no">4</span><div><div class="nm"><b>短線綜合<span class="delta muted">－</span></b><small>教學＋動能</small></div><div class="acc"><span class="bar"><i class="mid" style="left:52%"></i></span><b class="num mid">51%</b></div><div class="sub"><span>看多時準 58%（550次）</span><span>看空時準 44%（501次）</span><span>近3個月 54%</span><span>近5年 48%</span></div></div></li><li class="rank"><span class="no">5</span><div><div class="nm"><b>中長線綜合<span class="delta dn">▼3</span></b><small>趨勢方法</small></div><div class="acc"><span class="bar"><i class="mid" style="left:52%"></i></span><b class="num mid">51%</b></div><div class="sub"><span>看多時準 57%（2245次）</span><span>看空時準 45%（127次）</span><span>近3個月 48%</span><span>近5年 50%</span></div></div></li><li class="rank"><span class="no">6</span><div><div class="nm"><b>葛蘭碧八大法則<span class="delta up">▲4</span></b><small>Joseph Granville</small></div><div class="acc"><span class="bar"><i class="mid" style="left:51%"></i></span><b class="num mid">50%</b></div><div class="sub"><span>看多時準 58%（917次）</span><span>看空時準 43%（1070次）</span><span>近3個月 47%</span><span>近5年 51%</span></div></div></li><li class="rank"><span class="no">7</span><div><div class="nm"><b>K線型態（你的教學）<span class="delta up">▲2</span></b><small>看盤學習 12 張圖</small></div><div class="acc"><span class="bar"><i class="mid" style="left:50%"></i></span><b class="num mid">50%</b></div><div class="sub"><span>看多時準 59%（787次）</span><span>看空時準 41%（586次）</span><span>近3個月 53%</span><span>近5年 48%</span></div></div></li><li class="rank"><span class="no">8</span><div><div class="nm"><b>CAN SLIM 量價突破<span class="delta dn">▼1</span></b><small>William O&#x27;Neil</small></div><div class="acc"><span class="bar"><i class="mid" style="left:50%"></i></span><b class="num mid">50%</b></div><div class="sub"><span>看多時準 59%（998次）</span><span>看空時準 40%（344次）</span><span>近3個月 48%</span><span>近5年 50%</span></div></div></li><li class="rank"><span class="no">9</span><div><div class="nm"><b>OBV 能量潮<span class="delta up">▲2</span></b><small>Joseph Granville</small></div><div class="acc"><span class="bar"><i class="mid" style="left:49%"></i></span><b class="num mid">49%</b></div><div class="sub"><span>看多時準 57%（1371次）</span><span>看空時準 41%（905次）</span><span>近3個月 45%</span><span>近5年 51%</span></div></div></li><li class="rank"><span class="no">10</span><div><div class="nm"><b>趨勢模板<span class="delta dn">▼5</span></b><small>Mark Minervini</small></div><div class="acc"><span class="bar"><i class="mid" style="left:49%"></i></span><b class="num mid">49%</b></div><div class="sub"><span>看多時準 57%（2418次）</span><span>看空時準 41%（41次）</span><span>近3個月 44%</span><span>近5年 51%</span></div></div></li><li class="rank"><span class="no">11</span><div><div class="nm"><b>綜合分數<span class="delta dn">▼3</span></b><small>全部方法加權</small></div><div class="acc"><span class="bar"><i class="mid" style="left:48%"></i></span><b class="num mid">49%</b></div><div class="sub"><span>看多時準 58%（1711次）</span><span>看空時準 40%（102次）</span><span>近3個月 46%</span><span>近5年 51%</span></div></div></li><li class="rank"><span class="no">12</span><div><div class="nm"><b>道氏理論<span class="delta up">▲1</span></b><small>Charles Dow</small></div><div class="acc"><span class="bar"><i class="mid" style="left:48%"></i></span><b class="num mid">49%</b></div><div class="sub"><span>看多時準 57%（1217次）</span><span>看空時準 41%（845次）</span><span>近3個月 50%</span><span>近5年 50%</span></div></div></li><li class="rank"><span class="no">13</span><div><div class="nm"><b>MACD<span class="delta dn">▼1</span></b><small>Gerald Appel</small></div><div class="acc"><span class="bar"><i class="mid" style="left:48%"></i></span><b class="num mid">49%</b></div><div class="sub"><span>看多時準 56%（1287次）</span><span>看空時準 42%（1319次）</span><span>近3個月 52%</span><span>近5年 50%</span></div></div></li><li class="rank"><span class="no">14</span><div><div class="nm"><b>布林通道<span class="delta muted">－</span></b><small>John Bollinger</small></div><div class="acc"><span class="bar"><i class="mid" style="left:42%"></i></span><b class="num mid">47%</b></div><div class="sub"><span>看多時準 59%（340次）</span><span>看空時準 34%（227次）</span><span>近3個月 48%</span><span>近5年 49%</span></div></div></li></ul>
+<details><summary>改看「預測隔日」排行</summary><ul class="list"><li class="rank top"><span class="no">1</span><div><div class="nm"><b>短線綜合</b><small>教學＋動能</small></div><div class="acc"><span class="bar"><i class="mid" style="left:57%"></i></span><b class="num mid">53%</b></div><div class="sub"><span>看多時準 56%（568次）</span><span>看空時準 49%（503次）</span><span>近3個月 54%</span><span>近5年 49%</span></div></div></li><li class="rank top"><span class="no">2</span><div><div class="nm"><b>布林通道</b><small>John Bollinger</small></div><div class="acc"><span class="bar"><i class="mid" style="left:55%"></i></span><b class="num mid">52%</b></div><div class="sub"><span>看多時準 58%（349次）</span><span>看空時準 46%（235次）</span><span>近3個月 54%</span><span>近5年 49%</span></div></div></li><li class="rank top"><span class="no">3</span><div><div class="nm"><b>KD 隨機指標</b><small>George Lane</small></div><div class="acc"><span class="bar"><i class="mid" style="left:54%"></i></span><b class="num mid">52%</b></div><div class="sub"><span>看多時準 54%（517次）</span><span>看空時準 49%（706次）</span><span>近3個月 53%</span><span>近5年 50%</span></div></div></li><li class="rank"><span class="no">4</span><div><div class="nm"><b>綜合分數</b><small>全部方法加權</small></div><div class="acc"><span class="bar"><i class="mid" style="left:53%"></i></span><b class="num mid">51%</b></div><div class="sub"><span>看多時準 51%（1714次）</span><span>看空時準 51%（104次）</span><span>近3個月 51%</span><span>近5年 49%</span></div></div></li><li class="rank"><span class="no">5</span><div><div class="nm"><b>K線型態（你的教學）</b><small>看盤學習 12 張圖</small></div><div class="acc"><span class="bar"><i class="mid" style="left:51%"></i></span><b class="num mid">50%</b></div><div class="sub"><span>看多時準 55%（804次）</span><span>看空時準 46%（592次）</span><span>近3個月 53%</span><span>近5年 49%</span></div></div></li><li class="rank"><span class="no">6</span><div><div class="nm"><b>趨勢模板</b><small>Mark Minervini</small></div><div class="acc"><span class="bar"><i class="mid" style="left:49%"></i></span><b class="num mid">50%</b></div><div class="sub"><span>看多時準 51%（2438次）</span><span>看空時準 49%（41次）</span><span>近3個月 45%</span><span>近5年 48%</span></div></div></li><li class="rank"><span class="no">7</span><div><div class="nm"><b>道氏理論</b><small>Charles Dow</small></div><div class="acc"><span class="bar"><i class="mid" style="left:49%"></i></span><b class="num mid">50%</b></div><div class="sub"><span>看多時準 52%（1217次）</span><span>看空時準 47%（887次）</span><span>近3個月 51%</span><span>近5年 48%</span></div></div></li><li class="rank"><span class="no">8</span><div><div class="nm"><b>階段分析</b><small>Stan Weinstein</small></div><div class="acc"><span class="bar"><i class="mid" style="left:49%"></i></span><b class="num mid">50%</b></div><div class="sub"><span>看多時準 51%（2567次）</span><span>看空時準 48%（83次）</span><span>近3個月 45%</span><span>近5年 49%</span></div></div></li><li class="rank"><span class="no">9</span><div><div class="nm"><b>CAN SLIM 量價突破</b><small>William O&#x27;Neil</small></div><div class="acc"><span class="bar"><i class="mid" style="left:49%"></i></span><b class="num mid">49%</b></div><div class="sub"><span>看多時準 55%（998次）</span><span>看空時準 44%（387次）</span><span>近3個月 48%</span><span>近5年 49%</span></div></div></li><li class="rank"><span class="no">10</span><div><div class="nm"><b>OBV 能量潮</b><small>Joseph Granville</small></div><div class="acc"><span class="bar"><i class="mid" style="left:47%"></i></span><b class="num mid">49%</b></div><div class="sub"><span>看多時準 51%（1371次）</span><span>看空時準 47%（949次）</span><span>近3個月 46%</span><span>近5年 49%</span></div></div></li><li class="rank"><span class="no">11</span><div><div class="nm"><b>MACD</b><small>Gerald Appel</small></div><div class="acc"><span class="bar"><i class="mid" style="left:47%"></i></span><b class="num mid">49%</b></div><div class="sub"><span>看多時準 51%（1288次）</span><span>看空時準 47%（1362次）</span><span>近3個月 48%</span><span>近5年 48%</span></div></div></li><li class="rank"><span class="no">12</span><div><div class="nm"><b>葛蘭碧八大法則</b><small>Joseph Granville</small></div><div class="acc"><span class="bar"><i class="mid" style="left:46%"></i></span><b class="num mid">48%</b></div><div class="sub"><span>看多時準 51%（934次）</span><span>看空時準 46%（1072次）</span><span>近3個月 46%</span><span>近5年 49%</span></div></div></li><li class="rank"><span class="no">13</span><div><div class="nm"><b>中長線綜合</b><small>趨勢方法</small></div><div class="acc"><span class="bar"><i class="mid" style="left:45%"></i></span><b class="num mid">48%</b></div><div class="sub"><span>看多時準 51%（2247次）</span><span>看空時準 45%（143次）</span><span>近3個月 46%</span><span>近5年 48%</span></div></div></li><li class="rank"><span class="no">14</span><div><div class="nm"><b>RSI</b><small>J. Welles Wilder</small></div><div class="acc"><span class="bar"><i class="mid" style="left:39%"></i></span><b class="num mid">46%</b></div><div class="sub"><span>看多時準 47%（60次）</span><span>看空時準 44%（516次）</span><span>近3個月 49%</span><span>近5年 48%</span></div></div></li></ul></details>
+<details><summary>改看「預測 20 日後」排行</summary><ul class="list"><li class="rank top"><span class="no">1</span><div><div class="nm"><b>葛蘭碧八大法則</b><small>Joseph Granville</small></div><div class="acc"><span class="bar"><i class="up" style="left:63%"></i></span><b class="num up">55%</b></div><div class="sub"><span>看多時準 74%（864次）</span><span>看空時準 37%（1052次）</span><span>近3個月 66%</span><span>近5年 53%</span></div></div></li><li class="rank top"><span class="no">2</span><div><div class="nm"><b>KD 隨機指標</b><small>George Lane</small></div><div class="acc"><span class="bar"><i class="mid" style="left:55%"></i></span><b class="num mid">52%</b></div><div class="sub"><span>看多時準 74%（380次）</span><span>看空時準 30%（690次）</span><span>近3個月 54%</span><span>近5年 47%</span></div></div></li><li class="rank top"><span class="no">3</span><div><div class="nm"><b>RSI</b><small>J. Welles Wilder</small></div><div class="acc"><span class="bar"><i class="mid" style="left:52%"></i></span><b class="num mid">51%</b></div><div class="sub"><span>看多時準 73%（22次）</span><span>看空時準 29%（516次）</span><span>近3個月 85%</span><span>近5年 49%</span></div></div></li><li class="rank"><span class="no">4</span><div><div class="nm"><b>短線綜合</b><small>教學＋動能</small></div><div class="acc"><span class="bar"><i class="mid" style="left:51%"></i></span><b class="num mid">50%</b></div><div class="sub"><span>看多時準 67%（534次）</span><span>看空時準 34%（447次）</span><span>近3個月 41%</span><span>近5年 50%</span></div></div></li><li class="rank"><span class="no">5</span><div><div class="nm"><b>K線型態（你的教學）</b><small>看盤學習 12 張圖</small></div><div class="acc"><span class="bar"><i class="mid" style="left:51%"></i></span><b class="num mid">50%</b></div><div class="sub"><span>看多時準 68%（751次）</span><span>看空時準 33%（537次）</span><span>近3個月 47%</span><span>近5年 50%</span></div></div></li><li class="rank"><span class="no">6</span><div><div class="nm"><b>綜合分數</b><small>全部方法加權</small></div><div class="acc"><span class="bar"><i class="mid" style="left:50%"></i></span><b class="num mid">50%</b></div><div class="sub"><span>看多時準 68%（1659次）</span><span>看空時準 32%（71次）</span><span>近3個月 56%</span><span>近5年 51%</span></div></div></li><li class="rank"><span class="no">7</span><div><div class="nm"><b>MACD</b><small>Gerald Appel</small></div><div class="acc"><span class="bar"><i class="mid" style="left:50%"></i></span><b class="num mid">50%</b></div><div class="sub"><span>看多時準 68%（1285次）</span><span>看空時準 32%（1156次）</span><span>近3個月 45%</span><span>近5年 51%</span></div></div></li><li class="rank"><span class="no">8</span><div><div class="nm"><b>中長線綜合</b><small>趨勢方法</small></div><div class="acc"><span class="bar"><i class="mid" style="left:50%"></i></span><b class="num mid">50%</b></div><div class="sub"><span>看多時準 68%（2154次）</span><span>看空時準 32%（85次）</span><span>近3個月 63%</span><span>近5年 51%</span></div></div></li><li class="rank"><span class="no">9</span><div><div class="nm"><b>CAN SLIM 量價突破</b><small>William O&#x27;Neil</small></div><div class="acc"><span class="bar"><i class="mid" style="left:48%"></i></span><b class="num mid">49%</b></div><div class="sub"><span>看多時準 71%（997次）</span><span>看空時準 28%（275次）</span><span>近3個月 43%</span><span>近5年 51%</span></div></div></li><li class="rank"><span class="no">10</span><div><div class="nm"><b>階段分析</b><small>Stan Weinstein</small></div><div class="acc"><span class="bar"><i class="mid" style="left:48%"></i></span><b class="num mid">49%</b></div><div class="sub"><span>看多時準 68%（2362次）</span><span>看空時準 30%（79次）</span><span>近3個月 42%</span><span>近5年 51%</span></div></div></li><li class="rank"><span class="no">11</span><div><div class="nm"><b>OBV 能量潮</b><small>Joseph Granville</small></div><div class="acc"><span class="bar"><i class="mid" style="left:47%"></i></span><b class="num mid">49%</b></div><div class="sub"><span>看多時準 68%（1339次）</span><span>看空時準 30%（791次）</span><span>近3個月 37%</span><span>近5年 51%</span></div></div></li><li class="rank"><span class="no">12</span><div><div class="nm"><b>布林通道</b><small>John Bollinger</small></div><div class="acc"><span class="bar"><i class="mid" style="left:44%"></i></span><b class="num mid">47%</b></div><div class="sub"><span>看多時準 66%（332次）</span><span>看空時準 29%（208次）</span><span>近3個月 46%</span><span>近5年 50%</span></div></div></li><li class="rank"><span class="no">13</span><div><div class="nm"><b>道氏理論</b><small>Charles Dow</small></div><div class="acc"><span class="bar"><i class="mid" style="left:40%"></i></span><b class="num mid">46%</b></div><div class="sub"><span>看多時準 66%（1168次）</span><span>看空時準 26%（753次）</span><span>近3個月 52%</span><span>近5年 50%</span></div></div></li><li class="rank"><span class="no">14</span><div><div class="nm"><b>趨勢模板</b><small>Mark Minervini</small></div><div class="acc"><span class="bar"><i class="dn" style="left:31%"></i></span><b class="num dn">42%</b></div><div class="sub"><span>看多時準 68%（2307次）</span><span>看空時準 17%（41次）</span><span>近3個月 44%</span><span>近5年 51%</span></div></div></li></ul></details>
+</section><section class="block" id="market" data-nav="大盤預測"><h2 class="sec-title">大盤預測方式排行</h2>
+<p class="muted">用前一晚的資料預測台股當天漲跌，近 1 年共 250 個交易日。開盤方向通常比收盤準，因為盤中還會再變化。</p>
+<ul class="list"><li class="rank top"><span class="no">1</span><div><div class="nm"><b>夜盤</b></div><div class="acc"><span class="bar"><i class="up" style="left:85%"></i></span><b class="num up">78%</b></div><div class="sub"><span>收盤方向（上方橫條）</span><span>開盤方向 84%</span><span>近3個月收盤 74%</span><span>210 天</span></div></div></li><li class="rank"><span class="no">2</span><div><div class="nm"><b>綜合（夜盤60%＋美股40%）</b></div><div class="acc"><span class="bar"><i class="up" style="left:84%"></i></span><b class="num up">77%</b></div><div class="sub"><span>收盤方向（上方橫條）</span><span>開盤方向 84%</span><span>近3個月收盤 69%</span><span>215 天</span></div></div></li><li class="rank"><span class="no">3</span><div><div class="nm"><b>費城半導體</b></div><div class="acc"><span class="bar"><i class="up" style="left:79%"></i></span><b class="num up">73%</b></div><div class="sub"><span>收盤方向（上方橫條）</span><span>開盤方向 79%</span><span>近3個月收盤 68%</span><span>216 天</span></div></div></li><li class="rank"><span class="no">4</span><div><div class="nm"><b>美股加權</b></div><div class="acc"><span class="bar"><i class="up" style="left:79%"></i></span><b class="num up">73%</b></div><div class="sub"><span>收盤方向（上方橫條）</span><span>開盤方向 77%</span><span>近3個月收盤 65%</span><span>216 天</span></div></div></li><li class="rank"><span class="no">5</span><div><div class="nm"><b>標普500</b></div><div class="acc"><span class="bar"><i class="up" style="left:77%"></i></span><b class="num up">72%</b></div><div class="sub"><span>收盤方向（上方橫條）</span><span>開盤方向 71%</span><span>近3個月收盤 59%</span><span>200 天</span></div></div></li><li class="rank"><span class="no">6</span><div><div class="nm"><b>那斯達克</b></div><div class="acc"><span class="bar"><i class="up" style="left:77%"></i></span><b class="num up">71%</b></div><div class="sub"><span>收盤方向（上方橫條）</span><span>開盤方向 74%</span><span>近3個月收盤 61%</span><span>207 天</span></div></div></li><li class="rank"><span class="no">7</span><div><div class="nm"><b>台積電ADR</b></div><div class="acc"><span class="bar"><i class="up" style="left:73%"></i></span><b class="num up">68%</b></div><div class="sub"><span>收盤方向（上方橫條）</span><span>開盤方向 70%</span><span>近3個月收盤 68%</span><span>224 天</span></div></div></li><li class="rank"><span class="no">8</span><div><div class="nm"><b>道瓊工業</b></div><div class="acc"><span class="bar"><i class="up" style="left:60%"></i></span><b class="num up">58%</b></div><div class="sub"><span>收盤方向（上方橫條）</span><span>開盤方向 58%</span><span>近3個月收盤 51%</span><span>204 天</span></div></div></li></ul></section><section class="block" id="live" data-nav="實際紀錄"><h2 class="sec-title">實際紀錄（每天排程存下來的預測）</h2>
+<p class="muted">上面的排行是拿歷史資料回頭算；這裡是每天當下真的做出的預測，事後比對結果，最能反映真實準度。</p>
+<h3>大盤</h3><p>大盤評估實際命中 <b class="num">0%</b>（1 天）</p><ul class="list"><li class="row"><span>11/12<small>評估 強勢偏多・實際 -0.20%</small></span><span class="num">✘</span></li></ul><h3>個股方法（5 日／隔日平衡命中率）</h3><p class="note">從 2026/11/11 開始記錄，目前 3 個交易日、13 筆有結果。至少要累積約 4 週，數字才有參考價值。</p></section><section class="block" id="how" data-nav="怎麼看"><h2 class="sec-title">怎麼看這份週報</h2>
+<ul class="list">
+<li class="row"><span>平衡命中率<small>(看多時真的漲的比例 + 看空時真的跌的比例) ÷ 2。股票長期偏漲，一直喊多的方法單看命中率會虛高，這個算法可以排除。</small></span><span></span></li>
+<li class="row"><span>50% 附近<small>跟擲銅板差不多，代表這個方法在這段期間沒有預測力。</small></span><span></span></li>
+<li class="row"><span>55% 以上<small>在股市裡已經算有參考價值；超過 60% 很少見，也要小心只是運氣。</small></span><span></span></li>
+<li class="row"><span>近 3 個月 vs 近 1 年<small>方法的準度會隨行情改變（趨勢盤、盤整盤適合的方法不同），兩個都高才比較可靠。</small></span><span></span></li>
+<li class="row"><span>⚠ 只有單邊訊號<small>這段期間這個方法幾乎只喊多（或只喊空），平衡命中率只算了一邊，參考性較低。</small></span><span></span></li>
+<li class="row"><span>三大法人籌碼<small>歷史資料只抓近期，不在歷史排行裡，會出現在「實際紀錄」。</small></span><span></span></li>
+</ul></section>
+ <p class="warn">投資有風險，入市需謹慎。本報告依教學規則與公開分析方法自動判讀，僅供參考，不構成投資建議。</p>
+</div>
+<script>const CHARTS = {};
+(function(){
+  // 導覽列：依各區塊的 data-nav 產生按鈕，捲動時標示目前位置
+  const nav = document.getElementById('nav');
+  const secs = [...document.querySelectorAll('[data-nav]')];
+  const links = secs.map(s => {
+    const a = document.createElement('a');
+    a.href = '#' + s.id; a.textContent = s.dataset.nav; nav.appendChild(a); return a;
+  });
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(es => {
+      es.forEach(e => {
+        if (!e.isIntersecting) return;
+        const i = secs.indexOf(e.target);
+        links.forEach((a, j) => a.classList.toggle('on', i === j));
+        links[i].scrollIntoView({inline:'center', block:'nearest'});
+      });
+    }, {rootMargin:'-120px 0px -65% 0px'});
+    secs.forEach(s => io.observe(s));
+  }
+
+  // K 線圖：顏色取自 CSS 變數，深淺色切換時重新套用（套件晚到時由 onerror 備援呼叫 initCharts）
+  window.initCharts = initCharts;
+  if (window.LightweightCharts) initCharts();
+  function initCharts(){
+  if (!window.LightweightCharts || window.__chartsDone) return;
+  window.__chartsDone = true;
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const made = [];
+  function theme(){
+    return {up: css('--up'), dn: css('--dn'), ink: css('--muted'), line: css('--line')};
+  }
+  function paint(o){
+    const t = theme();
+    o.chart.applyOptions({layout:{background:{color:'transparent'}, textColor:t.ink},
+      grid:{vertLines:{color:t.line}, horzLines:{color:t.line}}});
+    o.candle.applyOptions({upColor:t.up, downColor:t.dn, borderUpColor:t.up, borderDownColor:t.dn,
+      wickUpColor:t.up, wickDownColor:t.dn});
+    o.vol.setData(o.c.vol.map(v => ({time:v.time, value:v.value, color:(v.up ? t.up : t.dn) + '66'})));
+    o.candle.setMarkers(o.c.marks.map(m => ({time:m.time, text:m.text,
+      position: m.side === 'buy' ? 'belowBar' : 'aboveBar', shape: m.side === 'buy' ? 'arrowUp' : 'arrowDown',
+      color: m.side === 'buy' ? t.up : t.dn})));
+  }
+  for (const [id, c] of Object.entries(CHARTS)) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    const chart = LightweightCharts.createChart(el, {autoSize:true,
+      rightPriceScale:{scaleMargins:{top:0.06, bottom:0.24}, borderVisible:false},
+      timeScale:{borderVisible:false}, crosshair:{mode:0},
+      handleScroll:{vertTouchDrag:false}, handleScale:{axisPressedMouseMove:false}});
+    const candle = chart.addCandlestickSeries({priceLineVisible:false});
+    candle.setData(c.candles);
+    const vol = chart.addHistogramSeries({priceFormat:{type:'volume'}, priceScaleId:'', lastValueVisible:false});
+    vol.priceScale().applyOptions({scaleMargins:{top:0.82, bottom:0}});
+    const col = {5:'#e08a00', 20:'#8b5cf6', 60:'#0ea5e9'};
+    for (const [n, data] of Object.entries(c.ma)) chart.addLineSeries({color:col[n], lineWidth:1,
+      priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false}).setData(data);
+    const o = {chart, candle, vol, c};
+    paint(o);
+    const n = c.candles.length;
+    chart.timeScale().setVisibleLogicalRange({from: Math.max(0, n - (el.clientWidth < 500 ? 60 : 120)), to: n + 2});
+    made.push(o);
+  }
+  const repaint = () => made.forEach(paint);
+  matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', repaint);
+  new MutationObserver(repaint).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+  }
+})();
+</script>

@@ -1,0 +1,77 @@
+# 看盤自動更新：在 GitHub 雲端執行，不需要開電腦。
+# 時間是 UTC（台北 = UTC+8）。GitHub 排程在尖峰時可能晚 5～30 分鐘才開始。
+name: 看盤自動更新
+
+on:
+  schedule:
+    - cron: "40 23 * * 0-4"   # 台北 週一～五 07:40：用完整夜盤評估當天
+    - cron: "30 8 * * 1-5"    # 台北 週一～五 16:30：收盤後確認訊號
+    - cron: "0 1 * * 6"       # 台北 週六 09:00：每週回測
+  workflow_dispatch:           # 也可以在 GitHub 網頁或手機 App 上手動按「Run workflow」
+    inputs:
+      backtest:
+        description: "改跑每週回測"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: kanpan
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    env:
+      KANPAN_SITE: "1"
+      PYTHONIOENCODING: utf-8
+      TZ: Asia/Taipei
+      IS_BACKTEST: ${{ github.event.schedule == '0 1 * * 6' || inputs.backtest == true }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: 每日看盤
+        if: env.IS_BACKTEST != 'true'
+        run: python -W ignore 看盤.py --no-open
+
+      - name: 每週回測
+        if: env.IS_BACKTEST == 'true'
+        run: python -W ignore 回測.py --no-open
+
+      - name: 整理網站
+        run: |
+          mkdir -p site
+          if [ -f 報告/最新報告.html ]; then cp 報告/最新報告.html site/index.html; fi
+          if [ -f 報告/回測週報.html ]; then cp 報告/回測週報.html site/backtest.html; fi
+          touch site/.nojekyll
+
+      - name: 存回預測紀錄與快取
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site 紀錄 快取
+          git diff --cached --quiet || git commit -m "自動更新 $(date '+%Y-%m-%d %H:%M')"
+          git pull --rebase --autostash || true
+          git push
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deploy
+        uses: actions/deploy-pages@v4
