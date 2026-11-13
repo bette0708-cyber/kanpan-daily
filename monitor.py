@@ -205,8 +205,9 @@ JS = r"""
 
   async function poll(){
     if (!PROXY) { setState('err', '尚未設定報價轉接服務'); return; }
+    const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 12000);   // 12 秒沒回應就放棄、下一輪重試
     try {
-      const r = await fetch(`${PROXY}/?ex_ch=${encodeURIComponent(ex)}`, {cache: 'no-store'});
+      const r = await fetch(`${PROXY}/?ex_ch=${encodeURIComponent(ex)}`, {cache: 'no-store', signal: ctl.signal});
       const j = await r.json();
       if (!r.ok || !j.msgArray) throw new Error(j.error || r.status);
       for (const m of j.msgArray) {
@@ -216,18 +217,30 @@ JS = r"""
       }
       setState(open() ? 'on' : '', open() ? `即時更新中・${hhmm(tpe())}` : `非交易時間・顯示最後報價（${hhmm(tpe())}）`);
       render();
-    } catch (e) { setState('err', `報價暫時抓不到（${e.message}），會自動重試`); }
+    } catch (e) {
+      setState('err', e.name === 'AbortError' ? '報價回應太慢，馬上重試…' : `報價暫時抓不到（${e.message}），會自動重試`);
+    } finally { clearTimeout(to); }
   }
   function setState(cls, txt){ $('#dot').className = 'dot ' + cls; $('#state').textContent = txt; }
-  function loop(){
-    clearTimeout(timer); if (paused || document.hidden) return;
-    poll().finally(() => { timer = setTimeout(loop, open() ? 5000 : 60000); });
+  // 一打開就先抓一次（有些 App 內建瀏覽器一開始會把頁面當成「在背景」）；
+  // 在背景時放慢成每分鐘一次，回到畫面立刻更新。
+  let busy = false;
+  async function loop(){
+    clearTimeout(timer);
+    if (paused || busy) return;
+    busy = true;
+    try { await poll(); } finally {
+      busy = false;
+      if (!paused) timer = setTimeout(loop, document.hidden || !open() ? 60000 : 5000);
+    }
   }
   $('#pause').addEventListener('click', () => {
     paused = !paused; $('#pause').textContent = paused ? '繼續更新' : '暫停';
-    if (!paused) loop(); else setState('', '已暫停');
+    if (!paused) loop(); else { clearTimeout(timer); setState('', '已暫停'); }
   });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) loop(); });
+  window.addEventListener('pageshow', () => loop());
+  window.addEventListener('focus', () => loop());
   render(); loop();
 })();
 """

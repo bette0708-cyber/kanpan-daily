@@ -58,6 +58,19 @@ export default {
       return json({ error: e.message || "發生錯誤" }, 500, origin);
     }
   },
+
+  // 準時觸發 GitHub 雲端更新（GitHub 自己的排程常延誤數小時，Cloudflare 的排程很準）。
+  // 時間見 wrangler.toml 的 [triggers]（UTC）。需要金鑰有 Actions「讀寫」權限。
+  async scheduled(event, env, ctx) {
+    const backtest = event.cron === "0 1 * * SAT";
+    ctx.waitUntil((async () => {
+      const r = await gh(env, "/actions/workflows/kanpan.yml/dispatches", {
+        method: "POST",
+        body: JSON.stringify({ ref: "main", inputs: { backtest: backtest ? "true" : "false" } }),
+      });
+      if (!r.ok) console.log(`觸發 GitHub 更新失敗：${r.status} ${await r.text()}`);
+    })());
+  },
 };
 
 // ------------------------------------------------------------------ 即時報價
@@ -75,21 +88,41 @@ async function quote(url, origin, ctx) {
       headers: { "Content-Type": "application/json; charset=utf-8", "X-Cache": "HIT", ...cors(origin) },
     });
   }
+  // 證交所偶爾很慢：最多等 8 秒，失敗就回傳最近 5 分鐘內最後一份成功的報價
+  const staleKey = new Request(`https://kanpan-cache.local/stale?ex_ch=${encodeURIComponent(exCh)}`);
   const upstream = `https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=${encodeURIComponent(exCh)}&json=1&delay=0&_=${Date.now()}`;
-  const r = await fetch(upstream, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
-      "Referer": "https://mis.twse.com.tw/stock/index.jsp",
-      "Accept": "application/json",
-    },
-  });
-  if (!r.ok) return json({ error: `證交所回應 ${r.status}` }, 502, origin);
-  const body = await r.text();
-  if (!body.trim().startsWith("{")) return json({ error: "證交所回傳格式不正確" }, 502, origin);
+  let body = null, why = "";
+  try {
+    const r = await fetch(upstream, {
+      signal: AbortSignal.timeout(8000),
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+        "Referer": "https://mis.twse.com.tw/stock/index.jsp",
+        "Accept": "application/json",
+      },
+    });
+    const text = await r.text();
+    if (r.ok && text.trim().startsWith("{")) body = text;
+    else why = `證交所回應 ${r.status}`;
+  } catch (e) {
+    why = e.name === "TimeoutError" ? "證交所 8 秒內沒有回應" : "連不到證交所";
+  }
+  if (body === null) {
+    const stale = await cache.match(staleKey);
+    if (stale) {
+      return new Response(await stale.text(), {
+        headers: { "Content-Type": "application/json; charset=utf-8", "X-Cache": "STALE", ...cors(origin) },
+      });
+    }
+    return json({ error: why }, 502, origin);
+  }
   const res = new Response(body, {
     headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": `public, max-age=${CACHE_SECONDS}` },
   });
-  ctx.waitUntil(cache.put(key, res.clone()));
+  const keep = new Response(body, {
+    headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "public, max-age=300" },
+  });
+  ctx.waitUntil(Promise.all([cache.put(key, res), cache.put(staleKey, keep)]));
   return new Response(body, {
     headers: { "Content-Type": "application/json; charset=utf-8", "X-Cache": "MISS", ...cors(origin) },
   });

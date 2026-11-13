@@ -6,6 +6,13 @@ workers_dev = true
 [vars]
 REPO = "bette0708-cyber/kanpan-daily"
 
+# 準時觸發 GitHub 雲端更新（UTC 時間；台北 = UTC+8）
+#   23:40 週日～四 = 台北 週一～五 07:40
+#   08:30 週一～五 = 台北 週一～五 16:30
+#   01:00 週六     = 台北 週六 09:00（每週回測）
+[triggers]
+crons = ["40 23 * * SUN-THU", "30 8 * * MON-FRI", "0 1 * * SAT"]
+
 # 密鑰（不寫在這裡）：
 #   npx wrangler@3.114.0 secret put GH_TOKEN    ← GitHub 細粒度金鑰（只能改 kanpan-daily 的內容）
 #   npx wrangler@3.114.0 secret put WATCH_PIN   ← 自選股管理 PIN 碼
