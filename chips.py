@@ -13,9 +13,9 @@ import numpy as np
 import pandas as pd
 import requests
 
-from data import UA
+from data import CACHE_ROOT, UA
 
-CACHE = Path(__file__).resolve().parent / "快取" / "法人"
+CACHE = CACHE_ROOT / "法人"
 
 
 def _num(s) -> float:

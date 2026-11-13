@@ -35,10 +35,10 @@ import outlook  # noqa: E402
 import patterns  # noqa: E402
 import report  # noqa: E402
 from data import SESSION_NIGHT, now_tpe, resolve_tw_symbol, taifex_tx  # noqa: E402
-from data import load_daily as yahoo_daily, sync_watchlist  # noqa: E402  (Yahoo＋官方校正)
+from data import LOCAL_SUFFIX, load_daily as yahoo_daily, sync_watchlist  # noqa: E402  (Yahoo＋官方校正)
 from report import esc  # noqa: E402
 
-LEDGER = HERE / "紀錄"
+LEDGER = HERE / f"紀錄{LOCAL_SUFFIX}"
 HORIZONS = {1: "隔日", 5: "5日", 20: "20日"}
 WINDOWS = [("近3個月", 63), ("近1年", 252), ("近5年", None)]
 MAIN_H, MAIN_W = 5, "近1年"          # 排行榜主要依據

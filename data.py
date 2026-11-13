@@ -73,7 +73,11 @@ def resolve_tw_symbol(code: str) -> str:
 
 
 # ---------------------------------------------------------------- 官方日K（補 Yahoo 缺漏）
-OFFICIAL_CACHE = Path(__file__).resolve().parent / "快取" / "行情"
+# 雲端（GitHub）用 快取/、紀錄/ 並存回 repo；電腦上執行改用 *_本機 資料夾，避免和雲端的檔案衝突
+import os as _os
+LOCAL_SUFFIX = "" if _os.environ.get("KANPAN_SITE") else "_本機"
+CACHE_ROOT = Path(__file__).resolve().parent / f"快取{LOCAL_SUFFIX}"
+OFFICIAL_CACHE = CACHE_ROOT / "行情"
 
 
 def _roc_date(s: str) -> pd.Timestamp:
@@ -197,7 +201,8 @@ def sync_watchlist(path: Path) -> None:
         r = requests.get(WATCHLIST_RAW, headers=UA, timeout=10, params={"t": int(time.time())})
         if r.status_code == 200 and "#" in r.text:
             text = r.content.decode("utf-8-sig")
-            if path.read_text(encoding="utf-8-sig") != text if path.exists() else True:
+            old = path.read_text(encoding="utf-8-sig") if path.exists() else ""
+            if old.splitlines() != text.splitlines():   # 只有內容真的不同才寫（忽略換行符號差異）
                 path.write_text(text, encoding="utf-8")
     except (requests.RequestException, OSError):
         pass

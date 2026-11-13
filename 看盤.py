@@ -22,7 +22,7 @@ if sys.stdout is None:
 
 import pandas as pd  # noqa: E402
 
-from data import load_daily as yahoo_daily, now_tpe, resolve_tw_symbol, sync_watchlist  # noqa: E402  (Yahoo＋官方校正)
+from data import LOCAL_SUFFIX, load_daily as yahoo_daily, now_tpe, resolve_tw_symbol, sync_watchlist  # noqa: E402  (Yahoo＋官方校正)
 import chips  # noqa: E402
 import manage  # noqa: E402
 import masters  # noqa: E402
@@ -47,7 +47,7 @@ def read_watchlist() -> dict[str, str]:
     return out
 
 
-LEDGER_DIR = HERE / "紀錄"
+LEDGER_DIR = HERE / f"紀錄{LOCAL_SUFFIX}"   # 雲端：紀錄/；電腦：紀錄_本機/
 
 
 def drop_partial(df: pd.DataFrame) -> pd.DataFrame:
