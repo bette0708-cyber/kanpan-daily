@@ -173,10 +173,11 @@ JS = r"""
     const idx = W.find(w => w.sym === '^TWII'), mi = idx && q[idx.ex];
     if (mi) {
       const c = pct(mi.p, mi.y);
-      const dir = OUTLOOK.score == null ? null : (OUTLOOK.score > 0 ? 1 : -1);
+      const dir = OUTLOOK.score == null || OUTLOOK.next ? null : (OUTLOOK.score > 0 ? 1 : -1);
       const ok = dir == null || c == null ? '—' : (Math.sign(c) === dir ? '✔ 方向一致' : '✘ 方向相反');
       t.innerHTML = `<div><span>加權指數</span><b class="num">${fmt(mi.p)}</b></div><div><span>漲跌</span><b>${pctHtml(c)}</b></div>`
-        + `<div><span>早上評估</span><b>${OUTLOOK.label || '—'}</b></div><div><span>目前比對</span><b>${ok}</b></div>`;
+        + `<div><span>${OUTLOOK.next ? '明日暫估' : '今日評估'}</span><b>${OUTLOOK.label || '—'}</b></div>`
+        + `<div><span>${OUTLOOK.next ? '說明' : '目前比對'}</span><b>${OUTLOOK.next ? '收盤後的暫估，不和今天比' : ok}</b></div>`;
     }
     const rows = W.filter(w => w.sym !== '^TWII').map(w => {
       const m = q[w.ex]; if (!m || !m.p) return {w, html: `<div class="card"><div class="c-top"><b class="nm">${w.name}</b><span class="muted">等待報價…</span></div></div>`, rank: 9};
@@ -252,7 +253,7 @@ def build_html(watch: list[dict], o: dict, now) -> str:
     if o.get("target") is not None:
         outlook = {"label": f"{o['label'][0]}（{o['target']:%m/%d}）", "score": round(float(o["score"]), 3)}
     elif o.get("provisional"):
-        outlook = {"label": f"{o['label'][0]}（暫估）", "score": round(float(o["score"]), 3)}
+        outlook = {"label": o['label'][0], "score": round(float(o["score"]), 3), "next": True}
     body = f"""
 <section class="block" id="live" data-nav="即時">
  <div class="live"><span class="dot" id="dot"></span><span id="state">連線中…</span>
